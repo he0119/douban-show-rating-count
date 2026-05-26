@@ -79,6 +79,7 @@
             span.textContent = " (" + formatCount(count) + "人)";
             span.style.fontSize = "11px";
             span.style.color = "#e09015";
+            span.style.marginLeft = "4px";
             ratingEl.appendChild(span);
         }
     }
