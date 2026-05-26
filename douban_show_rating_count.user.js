@@ -5,6 +5,7 @@
 // @icon         https://movie.douban.com/favicon.ico
 // @description  在豆瓣选电影页面的评分旁边显示评价人数
 // @author       uy/sun
+// @license      MIT
 // @match        https://movie.douban.com/explore*
 // @grant        none
 // @run-at       document-start
