@@ -4,7 +4,7 @@
 
 使用[约定式提交](https://www.conventionalcommits.org/)格式，使用中文描述。
 
-```
+```text
 feat: 新功能
 fix: 修复 bug
 docs: 文档变更
