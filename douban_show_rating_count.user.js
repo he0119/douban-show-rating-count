@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         豆瓣显示评价人数
 // @namespace    https://hehome.xyz/
-// @version      0.1.0
+// @version      0.1.1
 // @icon         https://movie.douban.com/favicon.ico
 // @description  在豆瓣选电影页面的评分旁边显示评价人数
 // @author       uy/sun
@@ -34,7 +34,8 @@
     XMLHttpRequest.prototype.send = function () {
         if (
             this._url &&
-            this._url.indexOf("rexxar/api/v2/subject/recent_hot") !== -1
+            (this._url.indexOf("rexxar/api/v2/subject/recent_hot") !== -1 ||
+                this._url.indexOf("rexxar/api/v2/movie/recommend") !== -1)
         ) {
             this.addEventListener("load", function () {
                 try {
