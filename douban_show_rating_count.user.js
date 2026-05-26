@@ -6,110 +6,90 @@
 // @description  在豆瓣选电影页面的评分旁边显示评价人数
 // @author       uy/sun
 // @match        https://movie.douban.com/explore*
-// @grant        GM_xmlhttpRequest
-// @connect      m.douban.com
-// @run-at       document-idle
+// @grant        none
+// @run-at       document-start
 // ==/UserScript==
 
 (function () {
-    'use strict';
+    "use strict";
 
-    var ATTR_PROCESSED = 'data-rating-count-processed';
-
-    // Rate-limited request queue
-    var REQUEST_INTERVAL = 600;
-    var requestQueue = [];
-    var isProcessing = false;
+    var ratingMap = {};
 
     function formatCount(n) {
-        if (n >= 100000000) return (n / 100000000).toFixed(1) + '亿';
-        if (n >= 10000) return (n / 10000).toFixed(1) + '万';
+        if (n >= 100000000) return (n / 100000000).toFixed(1) + "亿";
+        if (n >= 10000) return (n / 10000).toFixed(1) + "万";
         return n.toLocaleString();
     }
 
-    function processQueue() {
-        if (isProcessing || requestQueue.length === 0) return;
-        isProcessing = true;
-        var task = requestQueue.shift();
-        task();
-        setTimeout(function () {
-            isProcessing = false;
-            processQueue();
-        }, REQUEST_INTERVAL);
-    }
+    // Intercept XHR to capture rexxar API response
+    var origOpen = XMLHttpRequest.prototype.open;
+    var origSend = XMLHttpRequest.prototype.send;
 
-    function enqueue(fn) {
-        requestQueue.push(fn);
-        processQueue();
-    }
+    XMLHttpRequest.prototype.open = function (method, url) {
+        this._url = url;
+        return origOpen.apply(this, arguments);
+    };
 
-    function fetchRatingCount(subjectId, callback) {
-        enqueue(function () {
-            GM_xmlhttpRequest({
-                method: 'GET',
-                url: 'https://m.douban.com/rexxar/api/v2/movie/' + subjectId,
-                headers: {
-                    'Referer': 'https://movie.douban.com/'
-                },
-                onload: function (res) {
-                    if (res.status === 200) {
-                        try {
-                            var data = JSON.parse(res.responseText);
-                            if (data.rating && data.rating.count) {
-                                callback(data.rating.count);
+    XMLHttpRequest.prototype.send = function () {
+        if (
+            this._url &&
+            this._url.indexOf("rexxar/api/v2/subject/recent_hot") !== -1
+        ) {
+            this.addEventListener("load", function () {
+                try {
+                    var data = JSON.parse(this.responseText);
+                    if (data.items) {
+                        for (var i = 0; i < data.items.length; i++) {
+                            var item = data.items[i];
+                            if (item.rating && item.rating.count) {
+                                ratingMap[item.id] = item.rating.count;
                             }
-                        } catch (e) {}
+                        }
+                        injectAll();
                     }
-                }
+                } catch (e) {}
             });
-        });
-    }
+        }
+        return origSend.apply(this, arguments);
+    };
 
-    function injectRatingCount(ratingEl, count) {
-        if (ratingEl.querySelector('.rating-count')) return;
-        var span = document.createElement('span');
-        span.className = 'rating-count';
-        span.textContent = ' (' + formatCount(count) + '人)';
-        span.style.fontSize = '11px';
-        span.style.color = '#e09015';
-        ratingEl.appendChild(span);
-    }
-
-    function processMovieCards() {
-        var cards = document.querySelectorAll('.subject-list-list > li');
+    function injectAll() {
+        var cards = document.querySelectorAll(".subject-list-list > li");
         for (var i = 0; i < cards.length; i++) {
-            (function (card) {
-                if (card.getAttribute(ATTR_PROCESSED)) return;
+            var card = cards[i];
+            if (card.getAttribute("data-rc-done")) continue;
 
-                var ratingEl = card.querySelector('.drc-rating');
-                if (!ratingEl) return;
+            var ratingEl = card.querySelector(".drc-rating");
+            if (!ratingEl) continue;
 
-                var link = card.querySelector('a[href*="doubanapp/dispatch"]');
-                if (!link) return;
+            var link = card.querySelector('a[href*="doubanapp/dispatch"]');
+            if (!link) continue;
 
-                var match = link.href.match(/\/movie\/(\d+)/);
-                if (!match) return;
+            var match = link.href.match(/\/movie\/(\d+)/);
+            if (!match) continue;
 
-                card.setAttribute(ATTR_PROCESSED, 'true');
-                var subjectId = match[1];
+            var count = ratingMap[match[1]];
+            if (!count) continue;
 
-                fetchRatingCount(subjectId, function (count) {
-                    injectRatingCount(ratingEl, count);
-                });
-            })(cards[i]);
+            card.setAttribute("data-rc-done", "true");
+            var span = document.createElement("span");
+            span.className = "rating-count";
+            span.textContent = " (" + formatCount(count) + "人)";
+            span.style.fontSize = "11px";
+            span.style.color = "#e09015";
+            ratingEl.appendChild(span);
         }
     }
 
-    // Watch for dynamically loaded content
+    // DOM might render after API response
     var observer = new MutationObserver(function () {
-        processMovieCards();
+        if (Object.keys(ratingMap).length > 0) injectAll();
     });
 
-    observer.observe(document.body, {
-        childList: true,
-        subtree: true
+    document.addEventListener("DOMContentLoaded", function () {
+        observer.observe(document.body, {
+            childList: true,
+            subtree: true,
+        });
     });
-
-    // Initial scan
-    processMovieCards();
 })();
