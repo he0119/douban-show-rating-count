@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         豆瓣显示评价人数
 // @namespace    https://hehome.xyz/
-// @version      0.1.1
+// @version      0.1.2
 // @icon         https://movie.douban.com/favicon.ico
 // @description  在豆瓣选电影页面的评分旁边显示评价人数
 // @author       uy/sun
