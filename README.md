@@ -12,6 +12,10 @@
 
 打开 https://movie.douban.com/explore ，评分旁边会自动显示评价人数。
 
+## 致谢
+
+- [QriDoki](https://github.com/QriDoki) — 提供 mimo API key
+
 ## License
 
 MIT
